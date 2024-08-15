@@ -1,4 +1,17 @@
-import { Avatar, ButtonLoading, CampaignQuestion, CustomEditor, ErrorExeTransaction, imagePath, InputBanner, ipfsHashCreateCampaign, isNumeric, saveFile } from '@auxo-dev/frontend-common';
+import {
+    abiCampaign,
+    Avatar,
+    ButtonLoading,
+    CampaignQuestion,
+    contractAddress,
+    ErrorExeTransaction,
+    imagePath,
+    InputBanner,
+    ipfsHashCreateCampaign,
+    saveFile,
+    TokenInfo,
+    useSwitchToSelectedChain,
+} from '@auxo-dev/frontend-common';
 import { ChevronLeftRounded } from '@mui/icons-material';
 import { Box, Breadcrumbs, Container, MenuItem, Switch, TextField, Typography } from '@mui/material';
 import React from 'react';
@@ -6,8 +19,11 @@ import { Link } from 'react-router-dom';
 import { v4 as uuid } from 'uuid';
 import TimeLine from './TimeLine/TimeLine';
 import ApplicationForm from './ApplicationForm/ApplicationForm';
-import { useAccount } from 'wagmi';
+import { useAccount, useWriteContract } from 'wagmi';
 import { toast } from 'react-toastify';
+import { waitForTransactionReceipt } from 'viem/actions';
+import { config } from 'src/constants';
+import TokenFunding from './TokenFunding/TokenFunding';
 
 export type InputCreateBanner = {
     bannerImage: string;
@@ -24,12 +40,15 @@ export type InputCreateBanner = {
     keyId: string;
     capacity: number;
     fundingOption: number;
+    tokenFunding: TokenInfo;
     applicationForm: ({
         id: string;
     } & CampaignQuestion)[];
 };
 export default function CreateCampaign() {
     const { address } = useAccount();
+    const { switchToChainSelected, chainIdSelected } = useSwitchToSelectedChain();
+    const { writeContractAsync } = useWriteContract();
     const [inputCreateCampaign, setInputCreateCampaign] = React.useState<InputCreateBanner>({
         bannerImage: '',
         bannerFile: null,
@@ -53,10 +72,20 @@ export default function CreateCampaign() {
                 isRequired: true,
             },
         ],
+        tokenFunding: {
+            address: '0x00',
+            decimals: 0,
+            name: '',
+            symbol: '',
+        },
     });
 
     function changeDataInput(data: Partial<InputCreateBanner>) {
         setInputCreateCampaign((prev) => ({ ...prev, ...data }));
+    }
+
+    function onChangeTokenFunding(tokenFunding: Partial<TokenInfo>) {
+        setInputCreateCampaign((prev) => ({ ...prev, tokenFunding: { ...prev.tokenFunding, ...tokenFunding } }));
     }
 
     function onChangeBanner(file: File, image: string) {
@@ -81,6 +110,9 @@ export default function CreateCampaign() {
                 throw Error('Capacity must be a positive integer number!');
             }
 
+            if (!inputCreateCampaign.tokenFunding.address) throw Error('Token address is required');
+            if (inputCreateCampaign.tokenFunding.decimals == 0) throw Error('Token address is invalid');
+
             let avatarUrl = '';
             if (inputCreateCampaign.avatarFile) {
                 avatarUrl = (await saveFile(inputCreateCampaign.avatarFile)).URL;
@@ -97,7 +129,7 @@ export default function CreateCampaign() {
                 throw Error('Banner required!');
             }
 
-            const response = await ipfsHashCreateCampaign({
+            const ipfs = await ipfsHashCreateCampaign({
                 avatarImage: avatarUrl,
                 coverImage: bannerUrl,
                 name: inputCreateCampaign.name,
@@ -115,8 +147,22 @@ export default function CreateCampaign() {
                     startParticipation: new Date(inputCreateCampaign.allocationTimeStart).getTime() / 1000,
                     startRequesting: new Date(inputCreateCampaign.applicationTimeStart).getTime() / 1000,
                 },
+                tokenFunding: inputCreateCampaign.tokenFunding,
             });
-            console.log(response);
+            console.log(ipfs);
+
+            await switchToChainSelected();
+            const exeAction = await writeContractAsync({
+                abi: abiCampaign,
+                functionName: 'launchCampaign',
+                args: [BigInt(new Date(inputCreateCampaign.investmentTimeStart).getTime() / 1000), BigInt(10000000), inputCreateCampaign.tokenFunding.address, ipfs.HashHex],
+                address: contractAddress[chainIdSelected].Campaign,
+            });
+            console.log({ exeAction });
+
+            const waitTx = await waitForTransactionReceipt(config.getClient(), { hash: exeAction });
+            console.log({ waitTx });
+
             toast.update(idtoast, { render: 'Transaction successfull!', isLoading: false, type: 'success', autoClose: 3000, hideProgressBar: false });
         } catch (error) {
             if (idtoast) {
@@ -200,7 +246,9 @@ export default function CreateCampaign() {
                 }}
             />
 
-            <Box sx={{ mt: 6 }}>
+            <TokenFunding tokenFunding={inputCreateCampaign.tokenFunding} onChangeTokenFunding={onChangeTokenFunding} />
+
+            <Box sx={{ mt: 5 }}>
                 <TimeLine
                     allocationTimeStart={inputCreateCampaign.allocationTimeStart}
                     applicationTimeStart={inputCreateCampaign.applicationTimeStart}
