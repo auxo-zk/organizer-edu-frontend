@@ -1,4 +1,4 @@
-import { Avatar, ButtonLoading, CampaignQuestion, CustomEditor, imagePath, InputBanner } from '@auxo-dev/frontend-common';
+import { Avatar, ButtonLoading, CampaignQuestion, CustomEditor, ErrorExeTransaction, imagePath, InputBanner, ipfsHashCreateCampaign, isNumeric, saveFile } from '@auxo-dev/frontend-common';
 import { ChevronLeftRounded } from '@mui/icons-material';
 import { Box, Breadcrumbs, Container, MenuItem, Switch, TextField, Typography } from '@mui/material';
 import React from 'react';
@@ -6,6 +6,8 @@ import { Link } from 'react-router-dom';
 import { v4 as uuid } from 'uuid';
 import TimeLine from './TimeLine/TimeLine';
 import ApplicationForm from './ApplicationForm/ApplicationForm';
+import { useAccount } from 'wagmi';
+import { toast } from 'react-toastify';
 
 export type InputCreateBanner = {
     bannerImage: string;
@@ -27,7 +29,8 @@ export type InputCreateBanner = {
     } & CampaignQuestion)[];
 };
 export default function CreateCampaign() {
-    const [inputCreateBanner, setInputCreateBanner] = React.useState<InputCreateBanner>({
+    const { address } = useAccount();
+    const [inputCreateCampaign, setInputCreateCampaign] = React.useState<InputCreateBanner>({
         bannerImage: '',
         bannerFile: null,
         avatarImage: '',
@@ -53,7 +56,7 @@ export default function CreateCampaign() {
     });
 
     function changeDataInput(data: Partial<InputCreateBanner>) {
-        setInputCreateBanner((prev) => ({ ...prev, ...data }));
+        setInputCreateCampaign((prev) => ({ ...prev, ...data }));
     }
 
     function onChangeBanner(file: File, image: string) {
@@ -63,13 +66,70 @@ export default function CreateCampaign() {
         changeDataInput({ avatarImage: image, avatarFile: file });
     }
 
-    async function handleCreateCampaign() {}
+    async function handleCreateCampaign() {
+        const idtoast = toast.loading('Creating transaction...', { position: 'top-center', type: 'info' });
+        try {
+            if (!address) {
+                throw Error('Connect wallet required!');
+            }
+            if (!inputCreateCampaign.name) throw Error('Campaign name required!');
+            if (!inputCreateCampaign.description) throw Error('Campaign description required!');
+            if (!inputCreateCampaign.applicationTimeStart) throw Error('Application time start required!');
+            if (!inputCreateCampaign.allocationTimeStart) throw Error('Allocation time start required!');
+            if (!inputCreateCampaign.investmentTimeStart) throw Error('Investment time start required!');
+            if (isNaN(inputCreateCampaign.capacity) || !Number.isInteger(inputCreateCampaign.capacity) || inputCreateCampaign.capacity <= 0) {
+                throw Error('Capacity must be a positive integer number!');
+            }
+
+            let avatarUrl = '';
+            if (inputCreateCampaign.avatarFile) {
+                avatarUrl = (await saveFile(inputCreateCampaign.avatarFile)).URL;
+            }
+            if (!avatarUrl) {
+                throw Error('Avatar required!');
+            }
+
+            let bannerUrl = '';
+            if (inputCreateCampaign.bannerFile) {
+                bannerUrl = (await saveFile(inputCreateCampaign.bannerFile)).URL;
+            }
+            if (!bannerUrl) {
+                throw Error('Banner required!');
+            }
+
+            const response = await ipfsHashCreateCampaign({
+                avatarImage: avatarUrl,
+                coverImage: bannerUrl,
+                name: inputCreateCampaign.name,
+                capacity: inputCreateCampaign.capacity,
+                description: inputCreateCampaign.description,
+                fundingOption: inputCreateCampaign.fundingOption,
+                privacyOption: {
+                    isPrivate: inputCreateCampaign.privateFunding,
+                    committeeId: 0,
+                    keyId: 0,
+                } as any,
+                questions: inputCreateCampaign.applicationForm.map((item) => ({ question: item.question, hint: item.hint, isRequired: item.isRequired })),
+                timeline: {
+                    startFunding: new Date(inputCreateCampaign.investmentTimeStart).getTime() / 1000,
+                    startParticipation: new Date(inputCreateCampaign.allocationTimeStart).getTime() / 1000,
+                    startRequesting: new Date(inputCreateCampaign.applicationTimeStart).getTime() / 1000,
+                },
+            });
+            console.log(response);
+            toast.update(idtoast, { render: 'Transaction successfull!', isLoading: false, type: 'success', autoClose: 3000, hideProgressBar: false });
+        } catch (error) {
+            if (idtoast) {
+                toast.update(idtoast, { render: <ErrorExeTransaction error={error} />, type: 'error', position: 'top-center', isLoading: false, autoClose: 4000, hideProgressBar: false });
+            }
+        }
+    }
 
     return (
         <Container sx={{ pb: 5 }}>
             <Box sx={{ position: 'relative', mb: 9 }}>
                 <InputBanner
-                    src={inputCreateBanner.bannerImage || imagePath.DEFAULT_BANNER}
+                    src={inputCreateCampaign.bannerImage || imagePath.DEFAULT_BANNER}
                     alt="banner project"
                     onChange={(files) => {
                         const file = files?.[0];
@@ -84,7 +144,7 @@ export default function CreateCampaign() {
                 />
                 <Box sx={{ position: 'absolute', left: '20px', bottom: '-50px', borderRadius: '50%', border: '4px solid #FFFFFF' }}>
                     <Avatar
-                        src={inputCreateBanner.avatarImage || imagePath.DEFAULT_AVATAR}
+                        src={inputCreateCampaign.avatarImage || imagePath.DEFAULT_AVATAR}
                         size={100}
                         onChange={(files) => {
                             const file = files?.[0];
@@ -119,7 +179,7 @@ export default function CreateCampaign() {
                 type="text"
                 name="Campaign_name"
                 sx={{ mt: 5, mb: 3 }}
-                value={inputCreateBanner.name}
+                value={inputCreateCampaign.name}
                 onChange={(e) => {
                     changeDataInput({
                         name: e.target.value,
@@ -134,7 +194,7 @@ export default function CreateCampaign() {
                 size="small"
                 type="text"
                 name="campaign_description"
-                value={inputCreateBanner.description}
+                value={inputCreateCampaign.description}
                 onChange={(e) => {
                     changeDataInput({ description: e.target.value });
                 }}
@@ -142,9 +202,9 @@ export default function CreateCampaign() {
 
             <Box sx={{ mt: 6 }}>
                 <TimeLine
-                    allocationTimeStart={inputCreateBanner.allocationTimeStart}
-                    applicationTimeStart={inputCreateBanner.applicationTimeStart}
-                    investmentTimeStart={inputCreateBanner.investmentTimeStart}
+                    allocationTimeStart={inputCreateCampaign.allocationTimeStart}
+                    applicationTimeStart={inputCreateCampaign.applicationTimeStart}
+                    investmentTimeStart={inputCreateCampaign.investmentTimeStart}
                     setCampaignData={changeDataInput}
                 />
             </Box>
@@ -157,7 +217,7 @@ export default function CreateCampaign() {
                     <Typography variant="body1">Private funding</Typography>
                     <Switch
                         sx={{ ml: 2 }}
-                        checked={inputCreateBanner.privateFunding}
+                        checked={inputCreateCampaign.privateFunding}
                         onChange={(e, checked) => {
                             changeDataInput({ privateFunding: checked });
                         }}
@@ -206,7 +266,7 @@ export default function CreateCampaign() {
                 />
                 <TextField
                     size="small"
-                    value={inputCreateBanner.fundingOption}
+                    value={inputCreateCampaign.fundingOption}
                     select
                     sx={{ ml: 15, width: '300px' }}
                     onChange={(e) => {
@@ -218,7 +278,7 @@ export default function CreateCampaign() {
                 </TextField>
             </Box>
 
-            <ApplicationForm applicationForm={inputCreateBanner.applicationForm} setInputCreateBanner={setInputCreateBanner} />
+            <ApplicationForm applicationForm={inputCreateCampaign.applicationForm} setInputCreateCampaign={setInputCreateCampaign} />
 
             <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
                 <ButtonSubmit handleCreateCampaign={handleCreateCampaign} />

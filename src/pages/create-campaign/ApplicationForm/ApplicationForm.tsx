@@ -6,18 +6,18 @@ import { CustomEditor } from '@auxo-dev/frontend-common';
 import { v4 as uuid } from 'uuid';
 
 type Props = Pick<InputCreateBanner, 'applicationForm'> & {
-    setInputCreateBanner: React.Dispatch<React.SetStateAction<InputCreateBanner>>;
+    setInputCreateCampaign: React.Dispatch<React.SetStateAction<InputCreateBanner>>;
 };
 
-export default function ApplicationForm({ applicationForm, setInputCreateBanner }: Props) {
+export default function ApplicationForm({ applicationForm, setInputCreateCampaign }: Props) {
     function handleAddItem() {
-        setInputCreateBanner((prev) => ({ ...prev, applicationForm: [...prev.applicationForm, { id: uuid(), question: '', hint: '', isRequired: true }] }));
+        setInputCreateCampaign((prev) => ({ ...prev, applicationForm: [...prev.applicationForm, { id: uuid(), question: '', hint: '', isRequired: true }] }));
     }
     function deleteApplicationFormItem(index: number) {
-        setInputCreateBanner((prev) => ({ ...prev, applicationForm: prev.applicationForm.filter((_, i) => i !== index) }));
+        setInputCreateCampaign((prev) => ({ ...prev, applicationForm: prev.applicationForm.filter((_, i) => i !== index) }));
     }
     function handleItemChange(index: number, data: Partial<InputCreateBanner['applicationForm'][number]>) {
-        setInputCreateBanner((prev) => ({
+        setInputCreateCampaign((prev) => ({
             ...prev,
             applicationForm: prev.applicationForm.map((item, i) => (i === index ? { ...item, ...data } : item)),
         }));
