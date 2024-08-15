@@ -42,7 +42,7 @@ export default function TokenFunding({ tokenFunding, onChangeTokenFunding }: { t
     return (
         <>
             <Typography variant="h6" mt={4} mb={1}>
-                Token for recieve fund*
+                Funding token*
             </Typography>
             <TextField
                 size="small"

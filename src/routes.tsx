@@ -4,6 +4,7 @@ import AppLayout from './layout';
 import Profile from './pages/profile/Profile';
 import YourCampaigns from './pages/your-campaigns/YourCampaigns';
 import CreateCampaign from './pages/create-campaign/CreateCampaign';
+import ProfileGuest from './pages/profile-guest/ProfileGuest';
 
 export default function AppRouter() {
     return useRoutes([
@@ -22,6 +23,10 @@ export default function AppRouter() {
                 {
                     path: 'profile',
                     element: <Profile />,
+                },
+                {
+                    path: 'profile/:userAddress',
+                    element: <ProfileGuest />,
                 },
                 {
                     path: '*',

@@ -331,6 +331,7 @@ export default function CreateCampaign() {
             <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
                 <ButtonSubmit handleCreateCampaign={handleCreateCampaign} />
             </Box>
+            {/* <button onClick={() => console.log(inputCreateCampaign)}>log</button> */}
         </Container>
     );
 }
