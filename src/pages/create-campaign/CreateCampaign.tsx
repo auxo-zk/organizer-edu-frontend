@@ -25,7 +25,7 @@ import { waitForTransactionReceipt } from 'viem/actions';
 import { config } from 'src/constants';
 import TokenFunding from './TokenFunding/TokenFunding';
 
-export type InputCreateBanner = {
+export type InputCreateCampaign = {
     bannerImage: string;
     avatarImage: string;
     avatarFile: File | null;
@@ -49,7 +49,7 @@ export default function CreateCampaign() {
     const { address } = useAccount();
     const { switchToChainSelected, chainIdSelected } = useSwitchToSelectedChain();
     const { writeContractAsync } = useWriteContract();
-    const [inputCreateCampaign, setInputCreateCampaign] = React.useState<InputCreateBanner>({
+    const [inputCreateCampaign, setInputCreateCampaign] = React.useState<InputCreateCampaign>({
         bannerImage: '',
         bannerFile: null,
         avatarImage: '',
@@ -80,7 +80,7 @@ export default function CreateCampaign() {
         },
     });
 
-    function changeDataInput(data: Partial<InputCreateBanner>) {
+    function changeDataInput(data: Partial<InputCreateCampaign>) {
         setInputCreateCampaign((prev) => ({ ...prev, ...data }));
     }
 
@@ -129,6 +129,11 @@ export default function CreateCampaign() {
                 throw Error('Banner required!');
             }
 
+            const _timeline = {
+                startParticipation: new Date(inputCreateCampaign.applicationTimeStart).getTime() / 1000, //1
+                startFunding: new Date(inputCreateCampaign.investmentTimeStart).getTime() / 1000, //2
+                startRequesting: new Date(inputCreateCampaign.allocationTimeStart).getTime() / 1000, //3
+            };
             const ipfs = await ipfsHashCreateCampaign({
                 avatarImage: avatarUrl,
                 coverImage: bannerUrl,
@@ -142,11 +147,7 @@ export default function CreateCampaign() {
                     keyId: 0,
                 } as any,
                 questions: inputCreateCampaign.applicationForm.map((item) => ({ question: item.question, hint: item.hint, isRequired: item.isRequired })),
-                timeline: {
-                    startFunding: new Date(inputCreateCampaign.investmentTimeStart).getTime() / 1000,
-                    startParticipation: new Date(inputCreateCampaign.allocationTimeStart).getTime() / 1000,
-                    startRequesting: new Date(inputCreateCampaign.applicationTimeStart).getTime() / 1000,
-                },
+                timeline: _timeline,
                 tokenFunding: inputCreateCampaign.tokenFunding,
             });
             console.log(ipfs);
@@ -155,7 +156,7 @@ export default function CreateCampaign() {
             const exeAction = await writeContractAsync({
                 abi: abiCampaign,
                 functionName: 'launchCampaign',
-                args: [BigInt(new Date(inputCreateCampaign.investmentTimeStart).getTime() / 1000), BigInt(10000000), inputCreateCampaign.tokenFunding.address, ipfs.HashHex],
+                args: [BigInt(_timeline.startFunding), BigInt(_timeline.startRequesting - _timeline.startFunding), inputCreateCampaign.tokenFunding.address, ipfs.HashHex],
                 address: contractAddress[chainIdSelected].Campaign,
             });
             console.log({ exeAction });

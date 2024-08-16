@@ -2,10 +2,10 @@ import { Box, Grid, Typography } from '@mui/material';
 import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs, { Dayjs } from 'dayjs';
-import { InputCreateBanner } from '../CreateCampaign';
+import { InputCreateCampaign } from '../CreateCampaign';
 
-type Props = Pick<InputCreateBanner, 'allocationTimeStart' | 'applicationTimeStart' | 'investmentTimeStart'> & {
-    setCampaignData: (data: Partial<InputCreateBanner>) => void;
+type Props = Pick<InputCreateCampaign, 'allocationTimeStart' | 'applicationTimeStart' | 'investmentTimeStart'> & {
+    setCampaignData: (data: Partial<InputCreateCampaign>) => void;
 };
 export default function TimeLine({ allocationTimeStart, applicationTimeStart, investmentTimeStart, setCampaignData }: Props) {
     return (
