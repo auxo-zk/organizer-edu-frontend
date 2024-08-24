@@ -130,9 +130,9 @@ export default function CreateCampaign() {
             }
 
             const _timeline = {
-                startParticipation: new Date(inputCreateCampaign.applicationTimeStart).getTime(), //1
-                startFunding: new Date(inputCreateCampaign.investmentTimeStart).getTime(), //2
-                startRequesting: new Date(inputCreateCampaign.allocationTimeStart).getTime(), //3
+                startParticipation: new Date(inputCreateCampaign.applicationTimeStart).getTime() / 1000, //1
+                startFunding: new Date(inputCreateCampaign.investmentTimeStart).getTime() / 1000, //2
+                startRequesting: new Date(inputCreateCampaign.allocationTimeStart).getTime() / 1000, //3
             };
             const ipfs = await ipfsHashCreateCampaign({
                 avatarImage: avatarUrl,
