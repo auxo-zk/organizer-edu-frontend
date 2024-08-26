@@ -130,9 +130,9 @@ export default function CreateCampaign() {
             }
 
             const _timeline = {
-                startParticipation: new Date(inputCreateCampaign.applicationTimeStart).getTime() / 1000, //1
-                startFunding: new Date(inputCreateCampaign.investmentTimeStart).getTime() / 1000, //2
-                startRequesting: new Date(inputCreateCampaign.allocationTimeStart).getTime() / 1000, //3
+                startParticipation: new Date(inputCreateCampaign.applicationTimeStart).getTime(), //1
+                startFunding: new Date(inputCreateCampaign.investmentTimeStart).getTime(), //2
+                startRequesting: new Date(inputCreateCampaign.allocationTimeStart).getTime(), //3
             };
             const ipfs = await ipfsHashCreateCampaign({
                 avatarImage: avatarUrl,
@@ -156,7 +156,7 @@ export default function CreateCampaign() {
             const exeAction = await writeContractAsync({
                 abi: abiCampaign,
                 functionName: 'launchCampaign',
-                args: [BigInt(_timeline.startFunding), BigInt(_timeline.startRequesting - _timeline.startFunding), inputCreateCampaign.tokenFunding.address, ipfs.HashHex],
+                args: [BigInt(_timeline.startFunding/1000), BigInt(_timeline.startRequesting/1000 - _timeline.startFunding/1000), inputCreateCampaign.tokenFunding.address, ipfs.HashHex],
                 address: contractAddress[chainIdSelected].Campaign,
             });
             console.log({ exeAction });
